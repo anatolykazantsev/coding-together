@@ -1,0 +1,43 @@
+#!/bin/bash
+
+IMAGE='localhost/code-together/npm'
+
+read -d '' -r CONTAINERFILE <<'EOF'
+FROM docker.io/node:20-alpine3.18
+
+VOLUME ["/repo"]
+WORKDIR /repo
+
+RUN apk add --no-cache dumb-init git
+
+ENTRYPOINT ["dumb-init", "--", "npm"]
+EOF
+
+DIR_ROOT=$(realpath "$PWD")
+
+build () {
+    echo "$CONTAINERFILE" | sudo docker build -t "$IMAGE" --file - --no-cache .
+    local result=$?
+
+    return $result
+}
+
+run () {
+    sudo docker \
+        run \
+            -it \
+            --user "$(id -u):$(id -g)" \
+            --rm \
+            -v "$DIR_ROOT":/repo \
+        "$IMAGE" $@
+}
+
+is_container_built () {
+    sudo docker image inspect "$IMAGE" >/dev/null 2>&1;
+}
+
+if ! is_container_built; then
+  build || exit
+fi
+
+run $@

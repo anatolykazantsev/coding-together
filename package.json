@@ -1,0 +1,8 @@
+{
+  "name": "repo",
+  "packageManager": "yarn@4.1.0",
+  "type": "module",
+  "scripts": {
+    "app": "nodejs index.js"
+  }
+}
