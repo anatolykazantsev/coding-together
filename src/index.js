@@ -1,6 +1,7 @@
 import { JSONFilePreset } from "lowdb/node"
 import { argv } from "node:process"
 import { readFile } from "node:fs/promises"
+import FuzzySearch from "fuzzy-search";
 
 // npx node src/index.js import
 // npx node src/index.js search "<name1> <name2>
@@ -41,9 +42,36 @@ function searchByExactName(recipes, name) {
   return recipes.filter((recipe) => recipe.name === name)
 }
 
-function displayIngredient({quantity, unit, description}) {
+function fuzzySearch(recipes, name) {
+  const searcher = new FuzzySearch(recipes, ["name"]);
+  return searcher.search(name).slice(0, 4);
+}
+
+function convertMeasurementSystem(measurementSystem, quantity, unit) {
+  switch (measurementSystem) {
+    case "-i":
+      if (unit === 'g') {
+        return {
+          unit: 'oz',
+          quantity: quantity / 28.3495
+        }
+      }
+    case "-m":
+      if (unit === 'oz') {
+        return {
+          unit: 'g',
+          quantity: quantity * 28.3495
+        }
+      }
+    default:
+      return { quantity, unit }
+  }
+}
+
+function displayIngredient({quantity, unit, description}, measurementSystem) {
   if (quantity && unit) {
-    return `${quantity} ${unit} ${description}`
+    const { quantity: q , unit: u } = convertMeasurementSystem(measurementSystem, quantity, unit)
+    return `${q} ${u} ${description}`
   }
 
   if (quantity) {
@@ -53,23 +81,29 @@ function displayIngredient({quantity, unit, description}) {
   return description
 }
 
-function displayRecipe(recipe) {
+function displayRecipe(recipe, measurementSystem) {
   return `${recipe.name}
 ${"-".repeat(recipe.name.length)}
 
 Ingredients:
-${recipe.ingredients.map(displayIngredient).join("\n")}
+${recipe.ingredients.map((ingredient) => displayIngredient(ingredient, measurementSystem)).join("\n")}
 
 Instructions:
 ${recipe.method.map((instruction, index) => `${index + 1}. ${instruction}`).join("\n")}`
 }
 
-function searchCommand(recipes) {
+function searchCommand(recipes, measurementSystem) {
   const searchCriteria = getRecipeName()
 
-  const results = searchByExactName(recipes, searchCriteria)
+  let results = searchByExactName(recipes, searchCriteria)
+  
+  if (results.length == 0) {
+    results = fuzzySearch(recipes, searchCriteria)
+  }
 
-  const output = results.map(displayRecipe).join("\n\n\n")
+  const output = results
+    .map((recipe) => displayRecipe(recipe, measurementSystem))
+    .join("\n\n\n")
   console.log(output)
 }
 
@@ -88,7 +122,13 @@ async function main() {
 
   switch (argv[2]) {
     case "search":
-      searchCommand(recipes)
+      let measurementSystem = null;
+      if (['-i', '-m'].includes(argv[3])) {
+        measurementSystem = argv[3]
+        argv.splice(3, 1);
+      }
+
+      searchCommand(recipes, measurementSystem)
       break
 
     case "import":
