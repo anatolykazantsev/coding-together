@@ -1,5 +1,6 @@
 import { JSONFilePreset } from "lowdb/node"
-import { argv } from 'node:process';
+import { argv } from "node:process"
+import { readFile } from "node:fs/promises"
 
 // npx node src/index.js import
 // npx node src/index.js search "<name1> <name2>
@@ -16,7 +17,7 @@ import { argv } from 'node:process';
 //   recipes: Recipe[]
 // }
 
-let db;
+let db
 
 async function openDatabase() {
   return await JSONFilePreset("db.json", { recipes: [] })
@@ -33,11 +34,51 @@ async function saveRecipes(recipes) {
 }
 
 function getRecipeName() {
-  return argv.slice(2).join(' ');
+  return argv.slice(3).join(" ")
 }
 
 function searchByExactName(recipes, name) {
-  return recipes.filter((recipe) => recipe.name === name);
+  return recipes.filter((recipe) => recipe.name === name)
+}
+
+function displayIngredient({quantity, unit, description}) {
+  if (quantity && unit) {
+    return `${quantity} ${unit} ${description}`
+  }
+
+  if (quantity) {
+    return `${quantity} ${description}`
+  }
+
+  return description
+}
+
+function displayRecipe(recipe) {
+  return `${recipe.name}
+${"-".repeat(recipe.name.length)}
+
+Ingredients:
+${recipe.ingredients.map(displayIngredient).join("\n")}
+
+Instructions:
+${recipe.method.map((instruction, index) => `${index + 1}. ${instruction}`).join("\n")}`
+}
+
+function searchCommand(recipes) {
+  const searchCriteria = getRecipeName()
+
+  const results = searchByExactName(recipes, searchCriteria)
+
+  const output = results.map(displayRecipe).join("\n\n\n")
+  console.log(output)
+}
+
+async function importCommand(recipes) {
+  const data = await readFile(argv[3], { encoding: "utf8" })
+  const newRecipes = JSON.parse(data)
+
+  db.data.recipes.push(...newRecipes)
+  saveRecipes(recipes)
 }
 
 async function main() {
@@ -45,19 +86,18 @@ async function main() {
 
   const recipes = await loadRecipes()
 
-  const searchCriteria = getRecipeName();
+  switch (argv[2]) {
+    case "search":
+      searchCommand(recipes)
+      break
 
-  const result = searchByExactName(recipes, searchCriteria)
+    case "import":
+      importCommand(recipes)
+      break
 
-  console.log(result);
-
-
-  // recipes.push({
-  //   name: "Pancakes",
-  //   ingredients: ["flour", "milk", "eggs"],
-  //   instructions: ["Mix", "Cook"],
-  // })
-  // await saveRecipes(recipes)
+    default:
+      console.error(`Unknown command: ${argv[2]}`)
+  }
 }
 
 main()
