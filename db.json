@@ -1,0 +1,40 @@
+{
+  "recipes": [
+    {
+      "name": "Pancakes",
+      "ingredients": [
+        "flour",
+        "milk",
+        "eggs"
+      ],
+      "instructions": [
+        "Mix",
+        "Cook"
+      ]
+    },
+    {
+      "name": "Pancakes",
+      "ingredients": [
+        "flour",
+        "milk",
+        "eggs"
+      ],
+      "instructions": [
+        "Mix",
+        "Cook"
+      ]
+    },
+    {
+      "name": "Pancakes",
+      "ingredients": [
+        "flour",
+        "milk",
+        "eggs"
+      ],
+      "instructions": [
+        "Mix",
+        "Cook"
+      ]
+    }
+  ]
+}
